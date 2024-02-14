@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><database>
+    <ID>1</ID>
+    <Database_Type>mysql</Database_Type>
+    <Database_Name>online_employee_system</Database_Name>
+    <Host>172.20.94.26</Host>
+    <Username encrypted="yes">Xg0Ed9pi7IORAwfVAYU6iA==</Username>
+    <Port>3306</Port>
+    <Password encrypted="yes">JqE+UI4jYYp4PhTCwcpCiQwWAB5F9F7xiAXmKE7LA4Y=</Password>
+</database>
