@@ -16,76 +16,85 @@ public class Transactions {
 
 
     public static  void RollOver(Connection conn,String newPeriod){
-        System.out.println("Please note that we are rolling over to a new Period");
-        //variables
-        double salary;
-
-        //Active Period
-        String activePeriod= Period.Find(conn,"status = 'live'").getFieldValue("period");;
-        String activePeriodId = Period.Find(conn,"status = 'live'").getFieldValue("period_id");
-
-        //create and deactivate current active period
-        Map<String, String> values = new HashMap<String,String>();
-        values.put("period",newPeriod);
-        values.put("status","live");
-        Period.addPeriod(conn,values);
-
-        //Close current period
-        Map<String, String> values1 = new HashMap<String,String>();
-        values.put("status","closed");
-        Period.updatePeriod(conn,values1,activePeriodId);
         try {
+            //variables
+            double salary;
+            String earningTypeId = EarningType.Find(conn,"name = 'salary'").getFieldValue("earning_type_id");
+            //Active Period
+            String activePeriod= Period.Find(conn,"status = 'live'").getFieldValue("period");;
+            String activePeriodId = Period.Find(conn,"status = 'live'").getFieldValue("period_id");
+
+            if(activePeriod.equalsIgnoreCase(newPeriod) || Checker.calculateMonthGap(activePeriod,newPeriod) < 0){
+                System.out.println("Please note that we cannot roll to previous Period or current Period");
+            }else {
             conn.setAutoCommit(false);
+            System.out.println("Please note that we are rolling over to a new Period");
+            //create and deactivate current active period
+            Map<String, String> values = new HashMap<String, String>();
+            values.put("period", newPeriod);
+            values.put("status", "live");
+            Period.addPeriod(conn, values);
 
-        //Fetch all workers to check if they have being paid in the current month
-        JSONArray jsonArray = new JSONArray(Employees.Find(conn).getResponse());
+            //Close current period
+            Map<String, String> values1 = new HashMap<String, String>();
+            values1.put("status", "closed");
+            Period.updatePeriod(conn, values1, activePeriodId);
 
-        // Iterate through each object in the array
-        for (int i = 0; i < jsonArray.length(); i++) {
-            // Get the JSONObject at the current index
-            JSONObject jsonObject = jsonArray.getJSONObject(i);
+            //Fetch all workers to check if they have being paid in the current month
+            JSONArray jsonArray = new JSONArray(Employees.Find(conn).getResponse());
 
-            // Extract data from the JSONObject
-            String id = jsonObject.getString("employee_id");
+            // Iterate through each object in the array
+            for (int i = 0; i < jsonArray.length(); i++) {
+                // Get the JSONObject at the current index
+                JSONObject jsonObject = jsonArray.getJSONObject(i);
 
-            //Before Start update status
-            Transactions.updateStatus(conn,Integer.parseInt(id));
+                // Extract data from the JSONObject
+                String id = jsonObject.getString("employee_id");
 
-            //Select the data again and validate
-            String status = Employees.FindById(conn,Integer.parseInt(id)).getFieldValue("status");
+                //Before Start update status
+                Transactions.updateStatus(conn, Integer.parseInt(id));
 
+                //Select the data again and validate
+                String status = Employees.FindById(conn, Integer.parseInt(id)).getFieldValue("status");
 
-            //check if the employee has ever been paid
-            Map<String,Double> salaryList = Checker.salaryChecker(conn,Integer.parseInt(id));
+                System.out.println(status);
 
-            if("active".equalsIgnoreCase(status) || "leaving".equalsIgnoreCase(status)){
-                //If they are active or leaving
-                Map.Entry<String, Double> salaryAndPeriod =  Checker.getLastPaymentAndPeriod(salaryList);
-                assert salaryAndPeriod != null;
-                String period_check = salaryAndPeriod.getKey();
-                Double amount = salaryAndPeriod.getValue();
+                //check if the employee has ever been paid
+                Map<String, Double> salaryList = Checker.salaryChecker(conn, Integer.parseInt(id));
 
-                if(period_check.equalsIgnoreCase(newPeriod)){
-                    salary = amount;
+                System.out.println(salaryList);
+                if ("active".equalsIgnoreCase(status) || "leaving".equalsIgnoreCase(status)) {
+                    if (salaryList == null || salaryList.isEmpty()) {
+                        //Define salary for the first time
+                        System.out.println("Employee with id "+id+" and Name "+ Employees.FindById(conn,Integer.parseInt(id)).getFieldValue("firstname")+"  " + Employees.FindById(conn,Integer.parseInt(id)).getFieldValue("lastname")+" has never being paid please enter their Initial salary. Please not this employee status is now set to *Active*");
+                    } else {
+                        //If they are active or leaving
+                        Map.Entry<String, Double> salaryAndPeriod = Checker.getLastPaymentAndPeriod(salaryList);
+                        assert salaryAndPeriod != null;
+                        String period_check = salaryAndPeriod.getKey();
+                        Double amount = salaryAndPeriod.getValue();
 
-                }else{
-                    salary = calculateCurrentMonthSalary(amount);
+                        if (period_check.equalsIgnoreCase(newPeriod)) {
+                            salary = amount;
+
+                        } else {
+                            salary = calculateCurrentMonthSalary(amount);
+                            Map<String, String> inserts = new HashMap<String, String>();
+                            System.out.println(earningTypeId);
+                            inserts.put("earning_type_id", earningTypeId);
+                            inserts.put("employee_id", id);
+                            inserts.put("amount", "" + salary);
+                            inserts.put("period_id", Period.Find(conn, "status = 'live'").getValueByKey("period_id"));
+                            System.out.println(Earning.addEarning(conn, inserts));
+                        }
+
+                    }
                 }
-                Map<String, String> inserts = new HashMap<String, String>();
-                values.put("earning_type_id",EarningType.Find(conn,"name = 'salary'").getFieldValue("earning_type_id"));
-                values.put("employee_id",id);
-                values.put("amount",""+salary);
-                values.put("period_id",Period.Find(conn,"status = 'live'").getValueByKey("period_id"));
-                Earning.addEarning(conn,inserts);
 
-            }else if("new".equalsIgnoreCase(status)){
-                //If status is new it means they have never being paid
 
             }
-
-
+            conn.commit();
         }
-        conn.commit();
         } catch (SQLException e) {
             try {
                 conn.rollback();
@@ -115,12 +124,11 @@ public class Transactions {
 
         if(salaryList == null){
             //Define salary for the first time
-            System.out.println("This employee has never being paid please enter Initial salary to continue");
-
+            System.out.println("Employee with id "+employee_id+" and Name "+ Employees.FindById(connection,employee_id).getFieldValue("firstname")+"  " + Employees.FindById(connection,employee_id).getFieldValue("lastname")+" has never being paid please enter their Initial salary to Continue With payment Process.");
         }else{
 
             System.out.println("User has being paid before Start here");
-            //Now get the latest salary from the list and it's period
+            //Now get the latest salary from the list and period
             Map.Entry<String, Double> salaryAndPeriod =  Checker.getLastPaymentAndPeriod(salaryList);
             assert salaryAndPeriod != null;
             String period_check = salaryAndPeriod.getKey();
@@ -167,7 +175,12 @@ public class Transactions {
             for (String rate : rates) {
 
                 int rateValue = Integer.parseInt(EarningType.FindById(connection,(int) Double.parseDouble(rate)).getFieldValue("rate"));
-                //Insert to earnings table
+
+                //check if allowance exists. If yes just update.
+                String[] columns = {"count(*)"};
+                int recordExist = Integer.parseInt(Earning.Find(connection,columns,"employee_id = '"+ employee_id+ "' and " + " period_id = '" + period_id +"' and earning_type_id = '"+rate+"'").getFieldValue("count(*)"));
+
+                //Insert new allowance to earnings table
                 Map<String,String> values = new HashMap<>();
                 values.put("earning_type_id", rate);
                 values.put("employee_id",""+employee_id);
@@ -176,7 +189,12 @@ public class Transactions {
                 double amount_total = salary * ((double) rateValue /100);
                 values.put("amount",""+amount_total);
                 values.put("period_id",period_id);
-                Earning.addEarning(connection,values);
+                if(recordExist > 0){
+                    String id = Earning.Find(connection,"employee_id = '"+ employee_id+ "' and " + " period_id = '" + period_id +"' and earning_type_id = '"+rate+"'").getFieldValue("earning_id") ;
+                    Earning.updateEarnings(connection,values,id);
+                }else{
+                    Earning.addEarning(connection,values);
+                }
 
                 //add the rate here to calculate all allowances later
                 allowancesRates.add(rateValue);
@@ -194,7 +212,13 @@ public class Transactions {
             for (String rate : rates_deductions) {
 
                 int rateValue = Integer.parseInt(DeductionType.FindById(connection,(int) Double.parseDouble(rate)).getFieldValue("rate"));
-                //Insert to earnings table
+
+                //check if deductions exists. If yes just update.
+                String[] columns = {"count(*)"};
+
+                int recordExist = Integer.parseInt(Deduction.Find(connection,columns,"employee_id = '"+ employee_id+ "' and " + " period_id = '" + period_id +"' and deduction_type_id = '"+rate+"'").getFieldValue("count(*)"));
+
+                //Insert to deductions table
                 Map<String,String> values = new HashMap<>();
                 values.put("deduction_type_id", rate);
                 values.put("employee_id",""+employee_id);
@@ -203,7 +227,13 @@ public class Transactions {
                 double amount_total = salary * ((double) rateValue /100);
                 values.put("amount",""+amount_total);
                 values.put("period_id",period_id);
-                Deduction.addDeduction(connection,values);
+
+                if(recordExist > 0){
+                    String id = Deduction.Find(connection,"employee_id = '"+ employee_id+ "' and " + " period_id = '" + period_id +"' and deduction_type_id = '"+rate+"'").getFieldValue("deduction_id") ;
+                    Deduction.updateDeductions(connection,values,id);
+                }else{
+                    Deduction.addDeduction(connection,values);
+                }
 
                 //add the rate here to calculate all allowances later
                 deductionsRates.add(rateValue);
@@ -215,8 +245,15 @@ public class Transactions {
             double taxableIncome =totalPay - deductions;
             System.out.println("User Taxable income " + taxableIncome);
             if(taxableIncome > 25000){
+
+
                 int rateValue = Integer.parseInt(DeductionType.Find(connection,"name = 'PAYE'").getFieldValue("rate"));
                 String d_id = DeductionType.Find(connection,"name = 'PAYE'").getFieldValue("deduction_type_id");
+
+                //check if deductions exists. If yes just update.
+                String[] columns = {"count(*)"};
+                int recordExist = Integer.parseInt(Deduction.Find(connection,columns,"employee_id = '"+ employee_id+ "' and " + " period_id = '" + period_id +"' and deduction_type_id = '"+d_id+"'").getFieldValue("count(*)"));
+
                 Map<String,String> values = new HashMap<>();
                 values.put("deduction_type_id", d_id);
                 values.put("employee_id",""+employee_id);
@@ -225,7 +262,14 @@ public class Transactions {
                 double amount_total = taxableIncome * ((double) rateValue /100);
                 values.put("amount",""+amount_total);
                 values.put("period_id",period_id);
-                System.out.println( Deduction.addDeduction(connection,values));
+
+                if(recordExist > 0){
+                    String id = Deduction.Find(connection,"employee_id = '"+ employee_id+ "' and " + " period_id = '" + period_id +"' and deduction_type_id = '"+d_id+"'").getFieldValue("deduction_id") ;
+                    Deduction.updateDeductions(connection,values,id);
+                }else{
+                    Deduction.addDeduction(connection,values);
+                }
+
                 System.out.println("User PAYE " + amount_total);
             }
 
@@ -250,7 +294,7 @@ public class Transactions {
 
     public static void updateStatus(Connection conn, int employee_id){
     String status = "";
-    String period = Period.Find(conn).getFieldValue("period");
+    String period = Period.Find(conn,"status = 'live'").getFieldValue("period");
     String employmentDate= Employees.FindById(conn, employee_id).getFieldValue("employment_date");
     String employmentEndDate = Employees.FindById(conn, employee_id).getFieldValue("employment_end_date");
 
@@ -289,6 +333,30 @@ public class Transactions {
         }
         rate = rate / 100;
         return salary * rate;
+    }
+
+    public static void initialiseEmployeeSalary(Connection conn, int employee_id, double salary){
+
+        //Check if the employee has ever been paid
+        String salaryId = EarningType.Find(conn,"name = 'salary'").getFieldValue("earning_type_id");
+        String period_id = Period.Find(conn,"status = 'live'").getFieldValue("period_id");
+
+        String[] columns = {"count(*)"};
+        int recordExist = Integer.parseInt(Earning.Find(conn,columns,"employee_id = '"+ employee_id+ "' and earning_type_id = '"+salaryId+"'").getFieldValue("count(*)"));
+
+        if(recordExist > 0){
+            System.out.println("This user's salary is already initialised please continue with payments.");
+        }else{
+            Map<String,String> values = new HashMap<>();
+            values.put("earning_type_id", salaryId);
+            values.put("employee_id",""+employee_id);
+
+            //calculate allowance amount
+            values.put("amount",""+ salary);
+            values.put("period_id",period_id);
+            Earning.addEarning(conn,values);
+        }
+
     }
 
 }

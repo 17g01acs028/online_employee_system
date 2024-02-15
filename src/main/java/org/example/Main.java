@@ -45,17 +45,18 @@ public class Main {
           //  int[] rates = {1,2,3};
           //  System.out.println(Transactions.calculateAllowances(5000,rates,1));
 
-    // Checker.EmployeeStatus(conn,"1");
-//          Map<String, String> values = new HashMap<String,String>();
-//             Response r =  Employees.updateEmployee(conn,values,"3");
-//
-//            System.out.println(r);
-
+                // Checker.EmployeeStatus(conn,"1");
+            //          Map<String, String> values = new HashMap<String,String>();
+            //             Response r =  Employees.updateEmployee(conn,values,"3");
+                //
+             //   System.out.println(r);
            // Checker.initialSalaryChecker(conn,1,1);
           //  System.out.println(Arrays.toString(Checker.lastEarningChecker(conn, 1, 1)));
-          //  System.out.println(Checker.getLastPaymentAndPeriod(Objects.requireNonNull(Checker.salaryChecker(conn, 1))));
-        // Transactions.EmployeePayment(conn,1);
-        //   Transactions.RollOver(conn,"11/2023");
+            // System.out.println(Checker.getLastPaymentAndPeriod(Objects.requireNonNull(Checker.salaryChecker(conn, 1))));
+             //  Transactions.EmployeePayment(conn,1);
+             //  Transactions.RollOver(conn,"12/2023");
+               Transactions.EmployeePayment(conn,1);
+           //  Transactions.initialiseEmployeeSalary(conn,2, 30000);
         }else{
             System.out.println(checker.getMessage());
         }

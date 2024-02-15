@@ -20,10 +20,10 @@ public class Earning {
        return result;
     }
 
-    public static Response updatePeriod(Connection conn, Map<String, String> values,String id){
+    public static Response updateEarnings(Connection conn, Map<String, String> values,String id){
         Response result = null;
         try {
-            result = Update.updateSingleRow(conn,"earning",values,id);
+            result = Update.updateSingleRow(conn,"earnings",values,id);
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
@@ -48,7 +48,15 @@ public class Earning {
         }
         return result;
     }
-
+    public static Response Find(Connection conn,String[] columns, String where){
+        Response result = null;
+        try {
+            result = Select.select(conn, "earnings",columns, where);
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+        return result;
+    }
     public static Response FindById(Connection conn,int id){
         Response result = null;
         try {

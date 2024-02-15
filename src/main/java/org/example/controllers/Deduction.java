@@ -20,7 +20,7 @@ public class Deduction {
        return result;
     }
 
-    public static Response updateDeductionType(Connection conn, Map<String, String> values,String id){
+    public static Response updateDeductions(Connection conn, Map<String, String> values,String id){
         Response result = null;
         try {
             result = Update.updateSingleRow(conn,"deductions",values,id);
@@ -33,6 +33,25 @@ public class Deduction {
         Response result = null;
         try {
             result = Select.select(conn, "deductions");
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+        return result;
+    }
+    public static Response Find(Connection conn,String where){
+        Response result = null;
+        try {
+            result = Select.select(conn, "deductions",where);
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+        return result;
+    }
+
+    public static Response Find(Connection conn,String[] columns,String where){
+        Response result = null;
+        try {
+            result = Select.select(conn, "deductions",columns,where);
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
