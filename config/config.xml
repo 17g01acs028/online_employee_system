@@ -2,8 +2,8 @@
     <ID>1</ID>
     <Database_Type>mysql</Database_Type>
     <Database_Name>online_employee_system</Database_Name>
-    <Host>127.0.0.1</Host>
-    <Username encrypted="yes">twyj89+fft6MYNQC3MzliQ==</Username>
+    <Host>172.20.94.26</Host>
+    <Username encrypted="yes">Xg0Ed9pi7IORAwfVAYU6iA==</Username>
     <Port>3306</Port>
-    <Password encrypted="yes">bSonHspVwvkt9of+17KQQw==</Password>
+    <Password encrypted="yes">JqE+UI4jYYp4PhTCwcpCiQwWAB5F9F7xiAXmKE7LA4Y=</Password>
 </database>

@@ -55,7 +55,7 @@ public class Main {
             // System.out.println(Checker.getLastPaymentAndPeriod(Objects.requireNonNull(Checker.salaryChecker(conn, 1))));
              //  Transactions.EmployeePayment(conn,1);
              //  Transactions.RollOver(conn,"12/2023");
-               Transactions.EmployeePayment(conn,1);
+               //Transactions.EmployeePayment(conn,1);
            //  Transactions.initialiseEmployeeSalary(conn,2, 30000);
         }else{
             System.out.println(checker.getMessage());
